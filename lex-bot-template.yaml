@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  LexBot:
+    Type: "AWS::Lex::Bot"
+    Properties:
+      Name: "SampleLexBot"
+      Locale: "ja-JP"
+      ChildDirected: false
+      Intents:
+        - IntentName: "FallbackIntent"
+          IntentVersion: "$LATEST"
+        - IntentName: "SampleDemoIntent"
+          IntentVersion: "$LATEST"
+      VoiceId: "Mizuki"
+      ProcessBehavior: "BUILD"
+  
+  FallbackIntent:
+    Type: "AWS::Lex::Intent"
+    Properties:
+      Name: "FallbackIntent"
+      Description: "This is the fallback intent"
+      ConclusionStatement:
+        Messages:
+          - ContentType: "PlainText"
+            Content: "すみません、わかりませんでした。もう一度お願いします。"
+      SampleUtterances:
+        - "help"
+        - "support"
+      FulfillmentActivity:
+        Type: "ReturnIntent"
+  
+  SampleDemoIntent:
+    Type: "AWS::Lex::Intent"
+    Properties:
+      Name: "SampleDemoIntent"
+      Description: "This is a sample demo intent"
+      SampleUtterances:
+        - "ほげ"
+      FulfillmentActivity:
+        Type: "ReturnIntent"
