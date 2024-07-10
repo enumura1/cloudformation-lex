@@ -1,40 +1,91 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: 2010-09-09
+Description: Lex V2 Bot Template
+
+Parameters:
+  BotName:
+    Description: Bot Name.
+    Type: String
+    Default: "sample-lex-1"
+
 Resources:
+  # 1. IAM Role used by the Lex service to make runtime calls
+  BotRuntimeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lexv2.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: LexRuntimeRolePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "polly:SynthesizeSpeech"
+                  - "comprehend:DetectSentiment"
+                Resource: "*"
+
+  # 2. Lex Bot Definition
   LexBot:
-    Type: "AWS::Lex::Bot"
+    DependsOn: BotRuntimeRole
+    Type: AWS::Lex::Bot
     Properties:
-      Name: "SampleLexBot"
-      Locale: "ja-JP"
-      ChildDirected: false
-      Intents:
-        - IntentName: "FallbackIntent"
-          IntentVersion: "$LATEST"
-        - IntentName: "SampleDemoIntent"
-          IntentVersion: "$LATEST"
-      VoiceId: "Mizuki"
-      ProcessBehavior: "BUILD"
-  
-  FallbackIntent:
-    Type: "AWS::Lex::Intent"
+      Name: !Ref BotName
+      RoleArn: !GetAtt BotRuntimeRole.Arn
+      DataPrivacy:
+        ChildDirected: false
+      IdleSessionTTLInSeconds: 300
+      Description: "Bot with Fallback and SampleDemo intents"
+      AutoBuildBotLocales: false
+      BotLocales:
+        - LocaleId: "ja_JP"
+          Description: "Japanese locale"
+          NluConfidenceThreshold: 0.40
+          Intents:
+            - Name: "FallbackIntent"
+              Description: "Default intent when no other intent matches"
+              ParentIntentSignature: "AMAZON.FallbackIntent"
+              FulfillmentCodeHook:
+                Enabled: false
+              DialogCodeHook:
+                Enabled: false
+            - Name: "SampleDemoIntent"
+              Description: "Sample demo intent"
+              SampleUtterances:
+                - Utterance: "ほげ"
+              FulfillmentCodeHook:
+                Enabled: false
+              DialogCodeHook:
+                Enabled: false
+
+  # 3. Define a bot version that depends on the DRAFT version of the Lex Bot.
+  LexBotVersion:
+    DependsOn: LexBot
+    Type: AWS::Lex::BotVersion
     Properties:
-      Name: "FallbackIntent"
-      Description: "This is the fallback intent"
-      ConclusionStatement:
-        Messages:
-          - ContentType: "PlainText"
-            Content: "すみません、わかりませんでした。もう一度お願いします。"
-      SampleUtterances:
-        - "help"
-        - "support"
-      FulfillmentActivity:
-        Type: "ReturnIntent"
-  
-  SampleDemoIntent:
-    Type: "AWS::Lex::Intent"
+      BotId: !Ref LexBot
+      BotVersionLocaleSpecification:
+        - LocaleId: ja_JP
+          BotVersionLocaleDetails:
+            SourceBotVersion: DRAFT
+      Description: "Bot version for Fallback and SampleDemo intents"
+
+  # 4. Define the alias by providing the bot version created by the
+  #    AWS::Lex::BotVersion resource above.
+  BotAlias:
+    DependsOn: LexBotVersion
+    Type: AWS::Lex::BotAlias
     Properties:
-      Name: "SampleDemoIntent"
-      Description: "This is a sample demo intent"
-      SampleUtterances:
-        - "ほげ"
-      FulfillmentActivity:
-        Type: "ReturnIntent"
+      BotId: !Ref LexBot
+      BotAliasName: "BotAliasV1"
+      BotVersion: !GetAtt LexBotVersion.BotVersion
+      SentimentAnalysisSettings:
+        DetectSentiment: false
