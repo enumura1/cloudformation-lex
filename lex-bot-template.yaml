@@ -50,8 +50,6 @@ Resources:
             - Name: "FallbackIntent"
               Description: "Default intent when no other intent matches"
               ParentIntentSignature: "AMAZON.FallbackIntent"
-              FulfillmentCodeHook:
-                Enabled: false
               DialogCodeHook:
                 Enabled: false
             - Name: "SampleDemoIntent"
