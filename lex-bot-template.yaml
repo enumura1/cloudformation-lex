@@ -1,15 +1,13 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Lex V2 Bot Template
 
 Parameters:
   BotName:
-    Description: Bot Name.
     Type: String
-    Default: "sample-lex-1"
+    Default: "SampleBot"
 
 Resources:
-  # 1. IAM Role used by the Lex service to make runtime calls
-  BotRuntimeRole:
+  # 1. IAM Role
+  BotRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -33,13 +31,12 @@ Resources:
                   - "comprehend:DetectSentiment"
                 Resource: "*"
 
-  # 2. Lex Bot Definition
-  LexBot:
-    DependsOn: BotRuntimeRole
+  # 2. Lex Bot
+  SampleBot:
     Type: AWS::Lex::Bot
     Properties:
       Name: !Ref BotName
-      RoleArn: !GetAtt BotRuntimeRole.Arn
+      RoleArn: !GetAtt BotRole.Arn
       DataPrivacy:
         ChildDirected: false
       IdleSessionTTLInSeconds: 300
@@ -60,32 +57,26 @@ Resources:
             - Name: "SampleDemoIntent"
               Description: "Sample demo intent"
               SampleUtterances:
-                - Utterance: "ほげ"
-              FulfillmentCodeHook:
-                Enabled: false
+                - Utterance: "サンプルほげほげ"
               DialogCodeHook:
-                Enabled: false
+                Enabled: true
 
-  # 3. Define a bot version that depends on the DRAFT version of the Lex Bot.
-  LexBotVersion:
-    DependsOn: LexBot
+  # Version
+  SampleBotVersion:
     Type: AWS::Lex::BotVersion
     Properties:
-      BotId: !Ref LexBot
+      BotId: !Ref SampleBot
       BotVersionLocaleSpecification:
         - LocaleId: ja_JP
           BotVersionLocaleDetails:
             SourceBotVersion: DRAFT
-      Description: "Bot version for Fallback and SampleDemo intents"
 
-  # 4. Define the alias by providing the bot version created by the
-  #    AWS::Lex::BotVersion resource above.
+  # Alias
   BotAlias:
-    DependsOn: LexBotVersion
     Type: AWS::Lex::BotAlias
     Properties:
-      BotId: !Ref LexBot
-      BotAliasName: "BotAliasV1"
-      BotVersion: !GetAtt LexBotVersion.BotVersion
+      BotId: !Ref SampleBot
+      BotAliasName: "SampleBotAlias"
+      BotVersion: !GetAtt SampleBotVersion.BotVersion
       SentimentAnalysisSettings:
         DetectSentiment: false
